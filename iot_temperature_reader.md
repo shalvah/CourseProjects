@@ -33,7 +33,7 @@ Raspberry Pico program:
 ## Results
 After a day of recording:
 
-![Temperature and humidity line chart](img/iot_temperature_reader_1.png)
+![Temperature and humidity line chart](img/iot_temperature_reader_chart.png)
 
 
 ## Challenges
@@ -50,9 +50,12 @@ it would sometimes fail to connect to Wi-Fi afterwards. I never totally solved t
 but added a redundancy feature to reset the chip and retry connection.
 - **Memory leaks**: A minor problem was running into an "ENOMEM" (out of memory error) after two HTTP requests. 
 The solution to this was adding `response.close()` after each request.
+- **Time**: The Pico's onboard clock seems to always start from 1 Jan 2021, 
+so I added some code to resynchronize it from an NTP server on each restart.
 - **Visibility**: The chip is an opaque, limited system, so it can be quite hard to know what's going on when it's not connected to Thonny.
 To improve this, I used a lighting system: the onboard green LED would blink to indicate it was connecting to Wi-Fi, 
 and an extra RGB LED would pulse to show it was operating normally.
+- **Accuracy**: The DHT11 sensor only gives integral values, and with a precision of ±2 degrees, so the data isn't very reliable.
 
 ## Improvements
 - **Handling and indicating more error states**: For instance, too many failed network requests could turn the LED red.
