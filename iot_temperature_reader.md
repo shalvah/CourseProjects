@@ -109,7 +109,12 @@ except WiFiConnectionTimeout:
 
 try:
   run(temp_sensor, indicator)
-except Exception:
+except Exception as e:
+  # Since there's no easy way to view error logs, we report them to a remote server.
+  DEBUG_URL = "http//..."
+  resp = requests.post(DEBUG_URL, data=str(e), headers={"Authorization": "..."})
+  print(f"Reported error; response code {resp.status_code}")
+  resp.close()
   indicator.blue = 255
   raise
 ```
@@ -129,10 +134,10 @@ Another option is to get a dedicated power supply, such as [this](https://www.am
 it becomes hard to interrupt this. I was unable to edit the program or run any new programs via Thonny.
 Eventually I had to upload a new firmware that deleted all files on the chip, then reupload the MicroPython firmware and start again.
 My eventual solution was to add a 5-second delay before entering the loop, which gives me enough time to interrupt via Thonny.
-- **Wi-Fi connection failures or other interruptions**: When I interrupted the program on my PC, 
-it would sometimes fail to connect to Wi-Fi afterwards. I never totally solved this, 
-but added a redundancy feature to restart the chip after a while.
-I also assigned each possible state a colour in the indicator LED, so I could tell at a glance if something was wrong.
+- **Wi-Fi connection failures**:The Pico would sometimes fail to connect to Wi-Fi.
+To solve this, I added some code to restart the chip after a number of failed attempts.
+- **Other failures or interruptions**: Sometimes the setup would just stop working. Since it's very hard to read the logs directly,
+I added a step to report exceptions to my remote server before quitting (alternatively, you could restart).
 - **Memory leaks**: A minor problem was running into an "ENOMEM" (out of memory error) after two HTTP requests. 
 The solution to this was adding `response.close()` after each request.
 - **Time**: The Pico's onboard clock seems to always start from 1 Jan 2021, 
