@@ -33,8 +33,10 @@ from picozero import pico_led, RGBLED
 from time import sleep, time
 from dht import DHT11
 
+
 class WiFiConnectionTimeout(Exception):
-    pass
+  pass
+
 
 # States and indicator colours:
 # 1. Starting up - blink white
@@ -46,69 +48,70 @@ class WiFiConnectionTimeout(Exception):
 # 7. Three consecutive failures - permanent red
 # 8. Some other error - permanent blue (weird, I know, but for clarity)
 def connect(led):
-    led.blink(on_times=(0.5,0.5), colors=((0,0,1),(0,0,0)))
-    wlan = network.WLAN(network.STA_IF)
-    wlan.active(True)
-    ssid = "..."
-    password = "..."
-    print(f"Connecting to {ssid}")
-    wlan.connect(ssid, password)
-    attempts = 0
-    
-    while not wlan.isconnected():
-        attempts += 1
-        print("Waiting for connection...")
-        sleep(1)
-        if attempts > 10:
-            raise WiFiConnectionTimeout("Gave up on WiFi")
-    
-    print(wlan.ifconfig())
-    led.off()
-    
-def send_reading(temperature, humidity, timestamp):
-    url = f"https://..."
-    response = requests.post(url, headers={"Authorization": "..."})
-    print("Response code: {}".format(response.status_code))
-    response.close()
-    return response.status_code == 201
-    
-def run(sensor, led):
-    ntptime.settime() # Sync time so timestamps are correct
+  led.blink(on_times=(0.5, 0.5), colors=((0, 0, 1), (0, 0, 0)))
+  wlan = network.WLAN(network.STA_IF)
+  wlan.active(True)
+  ssid = "..."
+  password = "..."
+  print(f"Connecting to {ssid}")
+  wlan.connect(ssid, password)
+  attempts = 0
 
-    failures = 0
-    while True:
-      sensor.measure()
-      temp = sensor.temperature()
-      humidity = sensor.humidity()
-      succeeded = send_reading(temp, humidity, round(time()))
-      if not succeeded:
-          led.blink(colors=((1,0,0),(0,0,0)))
-          failures += 1
-          if failures >= 3:
-              led.red = 255
-              break
-      else:
-          led.blink(colors=((0,1,0),(0,0,0)))
-          failures = 0
-      
-      sleep(30) # Can only be read once per second, but 1/30 is enough for us
+  while not wlan.isconnected():
+    attempts += 1
+    print("Waiting for connection...")
+    sleep(1)
+    if attempts > 10:
+      raise WiFiConnectionTimeout("Gave up on WiFi")
+
+  print(wlan.ifconfig())
+  led.off()
+
+
+def send_reading(temperature, humidity, timestamp):
+  url = f"https://..."
+  response = requests.post(url, headers={"Authorization": "..."})
+  print("Response code: {}".format(response.status_code))
+  response.close()
+  return response.status_code == 201
+
+
+def run(sensor, led):
+  ntptime.settime()  # Sync time so timestamps are correct
+
+  failures = 0
+  while True:
+    sensor.measure()
+    succeeded = send_reading(sensor.temperature(), sensor.humidity(), round(time()))
+    if not succeeded:
+      led.blink(colors=((1, 0, 0), (0, 0, 0)))
+      failures += 1
+      if failures >= 3:
+        led.red = 255
+        break
+    else:
+      led.blink(colors=((0, 1, 0), (0, 0, 0)))
+      failures = 0
+
+    sleep(30)  # Can only be read once per second, but 1/30 is enough for us
+
 
 indicator = RGBLED(red=13, green=12, blue=11)
-indicator.blink(colors=((1,1,1),(0,0,0))) # White = starting up
-sleep(4)
+indicator.blink(colors=((1, 1, 1), (0, 0, 0)))  # White = starting up
+sleep(4) # Gives us time to interrupt via IDE
 
 temp_sensor = DHT11(machine.Pin(14, machine.Pin.IN, machine.Pin.PULL_UP))
 
 try:
-    connect(indicator)
+  connect(indicator)
 except WiFiConnectionTimeout:
-    machine.reset() # This basically restarts the Pico
+  machine.reset()  # This basically restarts the Pico
 
 try:
-    run(temp_sensor, indicator)
+  run(temp_sensor, indicator)
 except Exception:
-    indicator.blue = 255
-    raise
+  indicator.blue = 255
+  raise
 ```
 
 ## Results
