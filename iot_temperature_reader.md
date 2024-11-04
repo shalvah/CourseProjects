@@ -126,6 +126,27 @@ After a day of recording:
 
 
 ## Challenges
+### Observability
+Working with the Pico posed a big challenge: it's an opaque system. Knowing what's going on within it is quite hard, 
+especially when it's no longer connected to the PC. There are no logs, 
+and manually storing logs on device puts you at risk of filling up the storage space.
+Occasionally it would stop sending data after a while, or refuse to connect to Wi-Fi.
+To deal with this, I came up with a few strategies:
+- **Testing**: Lots of logging and testing different scenarios during development.
+- **Server-side logs**: On the backend, I logged every request from the Pico, so I could check to see if it was still sending.
+- **LED state indicator**: I added an RGB LED and assigned an indicator colour to each possible state
+(for instance, blinking blue = connecting to WiFi, blinking green = sent successfully, blinking red = last send failed,
+permanent red = last 3 sends failed). This way, I could tell at a glance if things were functioning.
+- **Sending error reports**: I added an `except` clause to catch all exceptions and send the error message to my server,
+allowing me to see what was the problem.
+
+### Resilience
+Related to the above was resilience—keeping the Pico running reliably.
+To deal with the intermittent Wi-Fi connection failures, I added a step to restart the controller after a certain number of attempts.
+There were also memory leaks at times ("ENOMEM" - out of memory error). One solution to this was adding `response.close()` after each request.
+This fixed the obvious bug, but the Pico still seemed to slowly leak memory over the course of two days.
+
+### Other challenges
 - **Powering the Pico**: In the initial phases, the chip was plugged in to my PC, but I needed an always-on solution, 
 while taking note of the Pico's power requirements, as specified in its datasheet.
 Eventually, I simply plugged it into an extension box with USB slots I had lying around.
@@ -134,20 +155,11 @@ Another option is to get a dedicated power supply, such as [this](https://www.am
 it becomes hard to interrupt this. I was unable to edit the program or run any new programs via Thonny.
 Eventually I had to upload a new firmware that deleted all files on the chip, then reupload the MicroPython firmware and start again.
 My eventual solution was to add a 5-second delay before entering the loop, which gives me enough time to interrupt via Thonny.
-- **Wi-Fi connection failures**:The Pico would sometimes fail to connect to Wi-Fi.
-To solve this, I added some code to restart the chip after a number of failed attempts.
-- **Other failures or interruptions**: Sometimes the setup would just stop working. Since it's very hard to read the logs directly,
-I added a step to report exceptions to my remote server before quitting (alternatively, you could restart).
-- **Memory leaks**: A minor problem was running into an "ENOMEM" (out of memory error) after two HTTP requests. 
-The solution to this was adding `response.close()` after each request.
 - **Time**: The Pico's onboard clock seems to always start from 1 Jan 2021, 
 so I added some code to resynchronize it from an NTP server on each restart.
-- **Visibility**: The chip is an opaque, limited system, so it can be quite hard to know what's going on when it's not connected to Thonny.
-To improve this, I added an indicator RGB LED that could take on different colours to indicate problems vs normal operation.
 - **Accuracy**: The DHT11 sensor only gives integral values, and with a precision of ±2 degrees, so the data isn't very reliable.
 
 ## Improvements
-- **Handling and indicating more error states**: For instance, too many failed network requests could turn the LED red.
-A failed Wi-Fi connection could cause it to flash red.  
-- **Informational lighting**: I could also use a LED to indicate when the temperature goes above or below threshold
+- **Informational lighting**: I could use an LED to indicate when the temperature goes above or below a threshold
 - **Automatic control**: I could connect this to my thermostat with an actuator to regulate the temperature.
+- Solving the memory errors
